@@ -5,11 +5,10 @@ class DataSaver:
     def __init__(self, path):
         self.path = path
 
-        # 🔹 تأكد من وجود المجلد
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
 
     # =========================
-    # Safe Save 🔥
+    # Safe Save 
     # =========================
     def save_chunk(self, df, first=False):
 
