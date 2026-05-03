@@ -15,7 +15,6 @@ kl_model = joblib.load("models/kl_model.pkl")
 features = joblib.load("models/features.pkl")
 cleaner = DataCleaner(label_column="label")
 engineer = FeatureEngineer()
-# إعداد الصفحة
 st.set_page_config(page_title="IoT IDS Dashboard", layout="wide")
 
 st.title("🚨 Real-Time IoT Intrusion Detection System")
@@ -33,14 +32,12 @@ def run_model_on_chunk(df):
     # Feature Selection
     # ======================
     df_selected = df.reindex(columns=features, fill_value=0)
-    # 🔥 تحويل hex → int
     for col in df_selected.columns:
         if df_selected[col].dtype == object:
             df_selected[col] = df_selected[col].apply(
                 lambda x: int(x, 16) if isinstance(x, str) and x.startswith("0x") else x
             )
 
-    # 🔥 تأكد أن كل القيم رقمية
     df_selected = df_selected.apply(pd.to_numeric, errors='coerce').fillna(0)
     # ======================
     # Isolation + KL
@@ -70,7 +67,6 @@ def run_model_on_chunk(df):
 
     probs = meta_model.predict_proba(stack_X_scaled)[:, 1]
 
-    # normalization (نفس main)
     probs = (probs - probs.min()) / (probs.max() - probs.min() + 1e-8)
 
     return probs
@@ -104,7 +100,6 @@ table_placeholder = st.empty()
 threshold_chart = st.empty()
 progress_bar = st.empty()
 # ======================
-# محاكاة البيانات (بدل model حالياً)
 # ======================
 def generate_probs(n=1000):
     normal = np.random.normal(0.5, 0.01, int(n * 0.9))
@@ -136,14 +131,11 @@ for step in range(50):
     df_chunk = pd.read_csv("data/raw/test30.csv").sample(500)
 
 
-    # 🔥 نفس preprocessing قبل الموديل
     df_clean = cleaner.clean_chunk(df_chunk)
 
-    # labels بعد التنظيف (مهم جداً)
     true_labels = df_clean["label"].copy()
     true_labels = (true_labels != 3).astype(int)
 
-    # نفس البيانات تدخل للموديل
     probs = run_model_on_chunk(df_clean)
     # adaptive threshold
     target_rate = max(0.04, min(0.10, probs.mean()))
