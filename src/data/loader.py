@@ -11,7 +11,7 @@ class DataLoader:
         return self.csv_files
 
     # =========================
-    # Safe CSV Reader 🔥
+    # Safe CSV Reader 
     # =========================
     def load_in_chunks(self, file_path):
         try:
@@ -32,7 +32,7 @@ class DataLoader:
             )
 
     # =========================
-    # Dataset Generator (محسّن)
+    # Dataset Generator 
     # =========================
     def dataset_generator(self):
         for file in self.csv_files:
@@ -41,10 +41,8 @@ class DataLoader:
             try:
                 for chunk in self.load_in_chunks(file):
 
-                    # 🔹 إزالة الأعمدة الفاضية بالكامل
                     chunk = chunk.dropna(axis=1, how="all")
 
-                    # 🔹 توحيد أسماء الأعمدة
                     chunk.columns = [col.strip() for col in chunk.columns]
 
                     yield chunk
