@@ -27,12 +27,10 @@ import numpy as np
 import joblib
 
 # ======================
-# إعداد المسار
 # ======================
 DATA_PATH = "data/raw"
 # =========================
 # ======================
-# إنشاء المكونات
 # ======================
 loader = DataLoader(DATA_PATH)
 cleaner = DataCleaner(label_column="label")
@@ -46,13 +44,12 @@ saver = DataSaver("data/processed/final_dataset.csv")
 
 print("Files found:", len(loader.get_files()))
 # ======================
-# BUILD TEST DATASET (منفصل تمامًا)
 # ======================
 print("\nBuilding TEST dataset...")
 print("\nBuilding FULL dataset...")
 
 all_data = []
-max_samples = 300000  # خليه هيك بالبداية
+max_samples = 300000  
 
 for chunk in loader.dataset_generator():
     chunk = cleaner.clean_chunk(chunk)
@@ -83,11 +80,9 @@ print(full_df["label"].value_counts())
 
 print("Test dataset size:", len(test_df))
 print(test_df["label"].value_counts())
-# 🔥 تنظيف نهائي قبل MI (الأهم)
 train_df["label"] = train_df["label"].astype(int)
 test_df["label"] = test_df["label"].astype(int)
 print("NaN count after cleaning:", train_df.isna().sum().sum())
-# 🔥 تنظيف قبل selection (مهم جداً)
 train_df = train_df.replace([float("inf"), float("-inf")], pd.NA)
 train_df = train_df.fillna(0).copy()
 train_df, selected_features = selector.full_selection(train_df, top_k=25)
@@ -95,7 +90,6 @@ selected_columns = selected_features
 print("\n🔥 SELECTED FEATURES:")
 print(selected_features)
 # ======================
-# TRAIN MODELS
 # ======================
 print("Before IF - label distribution:")
 print(train_df["label"].value_counts())
@@ -129,7 +123,6 @@ rf_probs_train = rf_model.predict_proba(X_rf_train)
 
 if len(rf_probs_train.shape) > 1:
     rf_probs_train = rf_probs_train[:, -1]
-# بناء features للـ stacking
 stack_X = pd.DataFrame({
     "rf": rf_probs_train,
     "iso": train_scored["anomaly_score"],
@@ -141,7 +134,6 @@ stack_y = y_rf_train
 scaler_stack = StandardScaler()
 stack_X_scaled = scaler_stack.fit_transform(stack_X)
 
-# 🔥 تدريب meta model
 meta_model = LogisticRegression()
 meta_model.fit(stack_X_scaled, stack_y) 
 
@@ -159,13 +151,12 @@ joblib.dump(rf_model, "models/rf_model.pkl")
 joblib.dump(iso_model, "models/iso_model.pkl")
 joblib.dump(kl_model, "models/kl_model.pkl")
 joblib.dump(selected_columns, "models/features.pkl")
-threshold = 0.5   # بداية منطقية
+threshold = 0.5  
 print("\n🔍 Searching for optimal weights...")
 
 best_auc = 0
 best_weights = (0.5, 0.3, 0.2)
 
-# Validation split من train
 
 val_df, _ = train_test_split(
     train_scored,
@@ -212,9 +203,7 @@ decision_model = DecisionModel(
 # ======================
 
 
-# 🔥 نفس الأعمدة المختارة من train
 test_df = test_df[selected_columns.tolist() + ["label"]]
-# 🔥 تنظيف test نفس train (مهم جداً)
 test_df = test_df.replace([float("inf"), float("-inf")], pd.NA)
 test_df = test_df.fillna(0)
 
@@ -224,7 +213,7 @@ test_scored = kl_model.compute(test_scored)
 
 # RF input
 # ======================
-# FIXED LABEL EXTRACTION 🔥
+# FIXED LABEL EXTRACTION 
 # ======================
 y_test = test_scored["label"].apply(lambda x: 0 if x == 3 else 1)
 y_test = y_test.astype(int)
@@ -264,7 +253,6 @@ stack_val_X_scaled = scaler_stack.transform(stack_val_X)
 
 probs = meta_model.predict_proba(stack_val_X_scaled)[:, 1]
 
-# 🔥 توسيع المجال
 probs = (probs - probs.min()) / (probs.max() - probs.min() + 1e-8)
 fpr, tpr, thresholds = roc_curve(y_val, probs)
 youden_index = tpr - fpr
@@ -301,7 +289,6 @@ for i, chunk in enumerate(loader.dataset_generator()):
     # ======================
     featured  = engineer.add_all_features(chunk)
 
-    # 🔥 إزالة NaN بعد Feature Engineering
     featured = featured.replace([float("inf"), float("-inf")], pd.NA)
     featured = featured.fillna(0)
     # ======================
@@ -321,7 +308,6 @@ for i, chunk in enumerate(loader.dataset_generator()):
     # ======================
     X_chunk, _ = rf_model.prepare_data(scored)
 
-    # 🔥 نفس الأعمدة المستخدمة في التدريب فقط
     X_chunk = X_chunk.reindex(columns=rf_features, fill_value=0)
     rf_probs_chunk = rf_model.predict_proba(X_chunk)
 
@@ -337,12 +323,10 @@ for i, chunk in enumerate(loader.dataset_generator()):
     stack_chunk_X_scaled = scaler_stack.transform(stack_chunk_X)
     probs = meta_model.predict_proba(stack_chunk_X_scaled)[:, 1]
 
-# 🔥 توسيع المجال
     probs = (probs - probs.min()) / (probs.max() - probs.min() + 1e-8) 
-    # 🔥 clip خفيف للـ outliers
     probs = np.clip(probs, 0.001, 0.999)
        # ======================
-    # Dynamic Threshold (علمي) 🔥
+    # Dynamic Threshold 
     # ======================
     y_true_chunk = scored["label"].apply(lambda x: 0 if x == 3 else 1)
     if len(y_true_chunk.unique()) > 1:
@@ -350,26 +334,20 @@ for i, chunk in enumerate(loader.dataset_generator()):
 # 🔥 Adaptive Threshold (Quantile + EMA)
         # ======================
 
-        # نسبة الهجمات المتوقعة (تقدر تعدلها حسب البيئة)
         target_rate = max(0.02, min(0.08, probs.mean()))
-        # نحسب threshold من توزيع السكور
         new_threshold = np.percentile(probs, 100 * (1 - target_rate))
 
-        # EMA smoothing (استقرار)
         alpha = 0.2
         threshold = (1 - alpha) * threshold + alpha * new_threshold
 
-        # حماية خفيفة فقط (مو clipping قاسي)
         threshold = max(0.03, min(0.99, threshold))
     print("Updated Threshold:", threshold)
 
     # ======================
-    # إعادة التنبؤ بالthreshold الجديد
     # ======================
     preds = (probs > threshold).astype(int)
 
     # ======================
-    # Evaluation (بعد التحديث)
     # ======================
     if len(y_true_chunk.unique()) > 1:
         results = evaluator.evaluate(y_true_chunk, preds, probs)
