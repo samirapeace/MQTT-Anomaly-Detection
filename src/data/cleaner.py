@@ -26,7 +26,7 @@ class DataCleaner:
         return df.drop_duplicates()
 
     # =========================
-    # 3. Handle Missing (أفضل من dropna)
+    # 3. Handle Missing 
     # =========================
     def handle_missing(self, df):
         numeric_cols = df.select_dtypes(include=[np.number]).columns
@@ -74,7 +74,7 @@ class DataCleaner:
         return df
 
     # =========================
-    # 7. Clip Outliers (خفيف)
+    # 7. Clip Outliers 
     # =========================
     def clip_outliers(self, df):
         numeric_cols = df.select_dtypes(include=[np.number]).columns
@@ -87,7 +87,7 @@ class DataCleaner:
         return df
 
     # =========================
-    # MAIN PIPELINE 🔥
+    # MAIN PIPELINE 
     # =========================
     def clean_chunk(self, df):
         df = self.clean_labels(df)
