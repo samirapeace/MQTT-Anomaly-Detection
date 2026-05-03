@@ -9,7 +9,7 @@ class DecisionModel:
         self.epsilon = 1e-9
 
     # =========================
-    # Robust Normalization 🔥
+    # Robust Normalization 
     # =========================
     def robust_normalize(self, series):
         series = np.array(series)
@@ -22,10 +22,8 @@ class DecisionModel:
 
         normalized = (series - median) / iqr
 
-        # clip لمنع القيم المتطرفة
         normalized = np.clip(normalized, -5, 5)
 
-        # تحويل لـ 0-1
         normalized = (normalized - normalized.min()) / (
             normalized.max() - normalized.min() + self.epsilon
         )
@@ -33,7 +31,7 @@ class DecisionModel:
         return normalized
 
     # =========================
-    # Adaptive Weights 🔥
+    # Adaptive Weights 
     # =========================
     def adaptive_weights(self, anomaly, prob, kl):
         stds = np.array([
@@ -54,7 +52,7 @@ class DecisionModel:
         return 1 / (1 + np.exp(-x))
 
     # =========================
-    # Main Decision Function 🔥🔥🔥
+    # Main Decision Function 
     # =========================
     def compute_score(self, anomaly_score, prob_score, kl_score):
 
@@ -66,20 +64,17 @@ class DecisionModel:
         # 🔹 Adaptive weights
         w_adaptive = self.adaptive_weights(anomaly_norm, prob_norm, kl_norm)
 
-        # دمج بين weights اليدوية + adaptive
         w_final = np.array([self.w1, self.w2, self.w3]) * 0.5 + w_adaptive * 0.5
 
         # normalize weights
         w_final = w_final / np.sum(w_final)
 
-        # 🔹 دمج
         combined = (
             w_final[0] * anomaly_norm +
             w_final[1] * prob_norm +
             w_final[2] * kl_norm
         )
 
-        # 🔹 تحويل لprobability
         final_score = self.sigmoid(combined)
 
         return final_score
