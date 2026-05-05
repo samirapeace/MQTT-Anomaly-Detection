@@ -26,12 +26,9 @@ from sklearn.preprocessing import StandardScaler
 import numpy as np
 import joblib
 
-# ======================
-# ======================
+
 DATA_PATH = "data/raw"
-# =========================
-# ======================
-# ======================
+
 loader = DataLoader(DATA_PATH)
 cleaner = DataCleaner(label_column="label")
 engineer = FeatureEngineer()
@@ -43,8 +40,7 @@ evaluator = ModelEvaluator()
 saver = DataSaver("data/processed/final_dataset.csv")
 
 print("Files found:", len(loader.get_files()))
-# ======================
-# ======================
+
 print("\nBuilding TEST dataset...")
 print("\nBuilding FULL dataset...")
 
@@ -89,14 +85,13 @@ train_df, selected_features = selector.full_selection(train_df, top_k=25)
 selected_columns = selected_features
 print("\n🔥 SELECTED FEATURES:")
 print(selected_features)
-# ======================
-# ======================
+
 print("Before IF - label distribution:")
 print(train_df["label"].value_counts())
 
 print("Checking benign rows:")
 print(len(train_df[train_df["label"] == 3]))
-# 🔹 Isolation Forest
+
 benign_train = train_df[train_df["label"] == 3]
 
 if len(benign_train) == 0:
@@ -104,7 +99,7 @@ if len(benign_train) == 0:
 print("Benign shape:", benign_train.shape)
 iso_model.train(benign_train)
 print("Benign used for IF:", len(benign_train))
-# 🔹 KL Divergence
+
 kl_model.fit(train_df)
 train_scored = iso_model.compute_scores(train_df)
 train_scored = kl_model.compute(train_scored)
@@ -113,9 +108,7 @@ X_train, y_train = rf_model.prepare_data(train_scored)
 
 rf_model.train(X_train, y_train)
 rf_features = X_train.columns
-# ======================
-# BUILD STACKING MODEL 🔥
-# ======================
+
 X_rf_train = X_train.reindex(columns=rf_features, fill_value=0)
 y_rf_train = y_train
 
@@ -139,9 +132,7 @@ meta_model.fit(stack_X_scaled, stack_y)
 
 print("Stacking model trained!")
 print("Models trained successfully!")
-# ======================
-# 🔥 SAVE MODELS FOR STREAMLIT
-# ======================
+
 
 os.makedirs("models", exist_ok=True)
 
@@ -198,32 +189,25 @@ decision_model = DecisionModel(
     w2=best_weights[1],
     w3=best_weights[2]
 )
-# ======================
-# PREPARE TEST DATA
-# ======================
+
 
 
 test_df = test_df[selected_columns.tolist() + ["label"]]
 test_df = test_df.replace([float("inf"), float("-inf")], pd.NA)
 test_df = test_df.fillna(0)
 
-# Scoring
+
 test_scored = iso_model.compute_scores(test_df)
 test_scored = kl_model.compute(test_scored)
 
-# RF input
-# ======================
-# FIXED LABEL EXTRACTION 
-# ======================
+
 y_test = test_scored["label"].apply(lambda x: 0 if x == 3 else 1)
 y_test = y_test.astype(int)
 X_test = test_scored.drop(columns=["label"])
 X_test = X_test.reindex(columns=rf_features, fill_value=0)
 print("y_test distribution:")
 print(y_test.value_counts())
-# ======================
-# STACKING PREDICTION
-# ======================
+
 rf_probs_test = rf_model.predict_proba(X_test)
 
 if len(rf_probs_test.shape) > 1:
@@ -268,44 +252,32 @@ preds_test = (probs_test > threshold).astype(int)
 print("\n===== REAL TEST EVALUATION =====")
 results = evaluator.evaluate(y_test, preds_test, probs_test)
 evaluator.print_results(results)
-# ======================
-# FULL PIPELINE
-# ======================
+
 threshold = float(threshold)
 threshold = max(0.01, min(0.99, threshold))
 print("Clipped Threshold:", threshold)
 for i, chunk in enumerate(loader.dataset_generator()):
     print(f"\nProcessing chunk {i}...")
 
-    # ======================
-    # Cleaning
-    # ======================
+
     chunk = cleaner.clean_chunk(chunk)
  
     if len(chunk) > 1000:
         chunk = chunk.sample(frac=1, random_state=42)
-    # ======================
-    # Feature Engineering
-    # ======================
+
     featured  = engineer.add_all_features(chunk)
 
     featured = featured.replace([float("inf"), float("-inf")], pd.NA)
     featured = featured.fillna(0)
-    # ======================
-    # Feature Selection
-    # ======================
+
     selected = featured.reindex(columns=selected_columns, fill_value=0)
     selected["label"] = featured["label"]
 
-    # ======================
-    # Scoring
-    # ======================
+
     scored = iso_model.compute_scores(selected)
     scored = kl_model.compute(scored)
 
-    # ======================
-    # Prediction
-    # ======================
+
     X_chunk, _ = rf_model.prepare_data(scored)
 
     X_chunk = X_chunk.reindex(columns=rf_features, fill_value=0)
@@ -325,14 +297,10 @@ for i, chunk in enumerate(loader.dataset_generator()):
 
     probs = (probs - probs.min()) / (probs.max() - probs.min() + 1e-8) 
     probs = np.clip(probs, 0.001, 0.999)
-       # ======================
-    # Dynamic Threshold 
-    # ======================
+
     y_true_chunk = scored["label"].apply(lambda x: 0 if x == 3 else 1)
     if len(y_true_chunk.unique()) > 1:
-        # ======================
-# 🔥 Adaptive Threshold (Quantile + EMA)
-        # ======================
+
 
         target_rate = max(0.02, min(0.08, probs.mean()))
         new_threshold = np.percentile(probs, 100 * (1 - target_rate))
@@ -343,12 +311,10 @@ for i, chunk in enumerate(loader.dataset_generator()):
         threshold = max(0.03, min(0.99, threshold))
     print("Updated Threshold:", threshold)
 
-    # ======================
-    # ======================
+
     preds = (probs > threshold).astype(int)
 
-    # ======================
-    # ======================
+
     if len(y_true_chunk.unique()) > 1:
         results = evaluator.evaluate(y_true_chunk, preds, probs)
         evaluator.print_results(results)
@@ -357,9 +323,7 @@ for i, chunk in enumerate(loader.dataset_generator()):
 
    
 
-    # ======================
-    # Hybrid Decision
-    # ======================
+
     final_scores = decision_model.compute_score(
         scored["anomaly_score"],
         probs,
@@ -372,9 +336,7 @@ for i, chunk in enumerate(loader.dataset_generator()):
     print("Prediction distribution:")
     print(pd.Series(preds).value_counts())
 
-    # ======================
-    # Logging
-    # ======================
+
     log_entry = {
         "time": datetime.datetime.now(),
         "chunk": i,
@@ -392,16 +354,12 @@ for i, chunk in enumerate(loader.dataset_generator()):
         index=False
     )
 
-    # ======================
-    # Save dataset
-    # ======================
+
     if i == 0:
         saver.save_chunk(scored, first=True)
     else:
         saver.save_chunk(scored, first=False)
 
-    # ======================
-    # Simulate streaming
-    # ======================
+
     time.sleep(1)
     
