@@ -7,9 +7,7 @@ class FeatureSelector:
     def __init__(self, label_column="label"):
         self.label_column = label_column
 
-    # =========================
-    # 1. Remove Highly Correlated Features
-    # =========================
+
     def remove_correlated(self, df, threshold=0.9):
         corr_matrix = df.corr(numeric_only=True).abs()
 
@@ -24,9 +22,7 @@ class FeatureSelector:
 
         return df.drop(columns=to_drop), to_drop
 
-    # =========================
-    # 2. Remove Low Variance Features 
-    # =========================
+
     def remove_low_variance(self, df, threshold=0.01):
         X = df.drop(columns=[self.label_column])
 
@@ -40,14 +36,12 @@ class FeatureSelector:
 
         return df_new, selected_columns
 
-    # =========================
-    # 3. Mutual Information (Improved) 
-    # =========================
+
     def select_by_mi(self, df, top_k=25):
         X = df.drop(columns=[self.label_column])
         y = df[self.label_column]
 
-        # Encoding label
+
         y_encoded = y.astype("category").cat.codes
 
         
@@ -69,9 +63,7 @@ class FeatureSelector:
 
         return df[selected_columns.tolist() + [self.label_column]], selected_columns
 
-    # =========================
-    # 4. FULL PIPELINE 
-    # =========================
+
     def full_selection(self, df, top_k=25):
         print("🔹 Removing low variance features...")
         df, _ = self.remove_low_variance(df)
