@@ -7,19 +7,17 @@ import pandas as pd
 class RFModel:
     def __init__(self):
         self.model = RandomForestClassifier(
-            n_estimators=200,          # 🔥 أقوى
-            max_depth=20,              # 🔥 يمنع overfitting
+            n_estimators=200,          
+            max_depth=20,              
             min_samples_split=5,
             min_samples_leaf=2,
             max_features="sqrt",
-            class_weight="balanced",   # 🔥 adaptive
+            class_weight="balanced",   
             random_state=42,
             n_jobs=-1
         )
 
-    # =========================
-    # Prepare Data
-    # =========================
+
     def prepare_data(self, df, label_column="label"):
 
         X = df.drop(columns=[label_column], errors="ignore")
@@ -29,9 +27,7 @@ class RFModel:
 
         return X, y
 
-    # =========================
-    # Train/Test Split
-    # =========================
+
     def split(self, X, y):
         return train_test_split(
             X, y,
@@ -40,21 +36,15 @@ class RFModel:
             random_state=42
         )
 
-    # =========================
-    # Train
-    # =========================
+  
     def train(self, X_train, y_train):
         self.model.fit(X_train, y_train)
 
-    # =========================
-    # Predict Probability
-    # =========================
+
     def predict_proba(self, X):
         return self.model.predict_proba(X)[:, 1]
 
-    # =========================
-    # Feature Importance 🔥🔥🔥
-    # =========================
+
     def get_feature_importance(self, feature_names):
 
         importances = self.model.feature_importances_
@@ -66,9 +56,7 @@ class RFModel:
 
         return importance_df
 
-    # =========================
-    # Top Features (اختياري)
-    # =========================
+
     def get_top_features(self, feature_names, top_n=10):
         importance_df = self.get_feature_importance(feature_names)
         return importance_df.head(top_n)
