@@ -10,9 +10,7 @@ class DataLoader:
     def get_files(self):
         return self.csv_files
 
-    # =========================
-    # Safe CSV Reader 
-    # =========================
+
     def load_in_chunks(self, file_path):
         try:
             return pd.read_csv(
@@ -31,9 +29,7 @@ class DataLoader:
                 on_bad_lines="skip"
             )
 
-    # =========================
-    # Dataset Generator 
-    # =========================
+
     def dataset_generator(self):
         for file in self.csv_files:
             print(f"📂 Loading: {file}")
