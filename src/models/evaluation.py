@@ -19,9 +19,7 @@ class ModelEvaluator:
     def __init__(self):
         self.epsilon = 1e-9
 
-    # =========================
-    # FULL EVALUATION 🔥
-    # =========================
+
     def evaluate(self, y_true, y_pred, y_prob):
 
         acc = accuracy_score(y_true, y_pred)
@@ -36,16 +34,12 @@ class ModelEvaluator:
         else:
             tn = fp = fn = tp = 0
 
-        # =========================
-        # Derived Metrics 🔥
-        # =========================
+  
         fpr_value = fp / (fp + tn + self.epsilon)
-        tnr = tn / (tn + fp + self.epsilon)  # Specificity
+        tnr = tn / (tn + fp + self.epsilon)  
         balanced_acc = (rec + tnr) / 2
 
-        # =========================
-        # AUC Metrics
-        # =========================
+ 
         if len(np.unique(y_true)) < 2:
             roc_auc = 0.5
             pr_auc = 0.5
@@ -66,21 +60,15 @@ class ModelEvaluator:
             "confusion_matrix": cm
         }
 
-    # =========================
-    # ROC CURVE
-    # =========================
+
     def compute_roc(self, y_true, y_prob):
         return roc_curve(y_true, y_prob)
 
-    # =========================
-    # PRECISION-RECALL CURVE 🔥
-    # =========================
+
     def compute_pr(self, y_true, y_prob):
         return precision_recall_curve(y_true, y_prob)
 
-    # =========================
-    # THRESHOLD ANALYSIS 🔥🔥🔥
-    # =========================
+
     def find_best_threshold(self, y_true, y_prob):
 
         fpr, tpr, thresholds = roc_curve(y_true, y_prob)
@@ -91,9 +79,6 @@ class ModelEvaluator:
 
         return best_threshold
 
-    # =========================
-    # PRINT RESULTS (محسّن)
-    # =========================
     def print_results(self, results):
 
         print("\n===== EVALUATION =====")
@@ -110,9 +95,6 @@ class ModelEvaluator:
         print("\nConfusion Matrix:")
         print(results["confusion_matrix"])
 
-    # =========================
-    # FULL REPORT 🔥
-    # =========================
     def detailed_report(self, y_true, y_pred):
         print("\n===== CLASSIFICATION REPORT =====")
         print(classification_report(y_true, y_pred, zero_division=0))
