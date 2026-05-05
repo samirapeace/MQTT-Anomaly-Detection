@@ -8,9 +8,7 @@ class DecisionModel:
         self.w3 = w3
         self.epsilon = 1e-9
 
-    # =========================
-    # Robust Normalization 
-    # =========================
+
     def robust_normalize(self, series):
         series = np.array(series)
 
@@ -30,9 +28,7 @@ class DecisionModel:
 
         return normalized
 
-    # =========================
-    # Adaptive Weights 
-    # =========================
+
     def adaptive_weights(self, anomaly, prob, kl):
         stds = np.array([
             np.std(anomaly),
@@ -44,29 +40,25 @@ class DecisionModel:
 
         return weights
 
-    # =========================
-    # Safe Sigmoid
-    # =========================
+
     def sigmoid(self, x):
         x = np.clip(x, -10, 10)
         return 1 / (1 + np.exp(-x))
 
-    # =========================
-    # Main Decision Function 
-    # =========================
+
     def compute_score(self, anomaly_score, prob_score, kl_score):
 
-        # 🔹 Robust normalization
+
         anomaly_norm = self.robust_normalize(anomaly_score)
         prob_norm = self.robust_normalize(prob_score)
         kl_norm = self.robust_normalize(kl_score)
 
-        # 🔹 Adaptive weights
+
         w_adaptive = self.adaptive_weights(anomaly_norm, prob_norm, kl_norm)
 
         w_final = np.array([self.w1, self.w2, self.w3]) * 0.5 + w_adaptive * 0.5
 
-        # normalize weights
+
         w_final = w_final / np.sum(w_final)
 
         combined = (
