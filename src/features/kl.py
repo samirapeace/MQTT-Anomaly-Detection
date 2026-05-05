@@ -8,9 +8,6 @@ class KLDivergence:
         self.reference_var = None
         self.feature_weights = None
 
-    # =========================
-    # FIT
-    # =========================
     def fit(self, df, label_column="label"):
         benign = df[df[label_column] == 3]
         X = benign.drop(columns=[label_column], errors="ignore")
@@ -18,12 +15,10 @@ class KLDivergence:
         self.reference_mean = X.mean()
         self.reference_var = X.var() + self.epsilon
 
-        # 🔥 Feature importance approximation (variance-based)
+
         self.feature_weights = 1 / (self.reference_var + self.epsilon)
 
-    # =========================
-    # COMPUTE KL (Improved)
-    # =========================
+
     def compute(self, df, label_column="label"):
         X = df.drop(columns=[label_column, "anomaly_score"], errors="ignore")
 
@@ -37,19 +32,16 @@ class KLDivergence:
             mean = self.reference_mean[col]
             var = self.reference_var[col]
 
-            # z-score
             z = (X[col] - mean) / np.sqrt(var)
 
-            # KL-like score (Gaussian assumption)
+   
             kl = 0.5 * (z ** 2)
 
-            # 🔥 weighted contribution
+
             weight = self.feature_weights[col]
             kl_scores += weight * kl
 
-        # =========================
-        # NORMALIZATION 🔥
-        # =========================
+
         kl_scores = (kl_scores - kl_scores.min()) / (
             kl_scores.max() - kl_scores.min() + self.epsilon
         )
