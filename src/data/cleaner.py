@@ -5,9 +5,6 @@ class DataCleaner:
     def __init__(self, label_column="label"):
         self.label_column = label_column
 
-    # =========================
-    # 1. Clean Labels
-    # =========================
     def clean_labels(self, df):
         if self.label_column in df.columns:
             df[self.label_column] = (
@@ -19,39 +16,30 @@ class DataCleaner:
             )
         return df
 
-    # =========================
-    # 2. Remove Duplicates
-    # =========================
     def remove_duplicates(self, df):
         return df.drop_duplicates()
 
-    # =========================
-    # 3. Handle Missing 
-    # =========================
+  
     def handle_missing(self, df):
         numeric_cols = df.select_dtypes(include=[np.number]).columns
         categorical_cols = df.select_dtypes(exclude=[np.number]).columns
 
-        # numeric → fill median
+
         df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].median())
 
-        # categorical → fill mode
+
         for col in categorical_cols:
             df[col] = df[col].fillna(df[col].mode()[0] if not df[col].mode().empty else "unknown")
 
         return df
 
-    # =========================
-    # 4. Remove Constant Columns
-    # =========================
+
     def remove_constant_columns(self, df):
         nunique = df.nunique()
         constant_cols = nunique[nunique <= 1].index
         return df.drop(columns=constant_cols, errors="ignore")
 
-    # =========================
-    # 5. Remove Text Columns (MQTT specific)
-    # =========================
+
     def remove_text_columns(self, df):
         text_cols = [
             "mqtt.msg",
@@ -61,9 +49,7 @@ class DataCleaner:
         ]
         return df.drop(columns=text_cols, errors="ignore")
 
-    # =========================
-    # 6. Convert Flags to Numeric
-    # =========================
+
     def convert_to_numeric(self, df):
         for col in df.columns:
             if df[col].dtype == "object":
@@ -73,9 +59,7 @@ class DataCleaner:
                     pass
         return df
 
-    # =========================
-    # 7. Clip Outliers 
-    # =========================
+
     def clip_outliers(self, df):
         numeric_cols = df.select_dtypes(include=[np.number]).columns
 
@@ -86,9 +70,7 @@ class DataCleaner:
 
         return df
 
-    # =========================
-    # MAIN PIPELINE 
-    # =========================
+
     def clean_chunk(self, df):
         df = self.clean_labels(df)
         df = self.remove_duplicates(df)
