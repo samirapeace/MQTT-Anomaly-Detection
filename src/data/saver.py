@@ -7,9 +7,6 @@ class DataSaver:
 
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
 
-    # =========================
-    # Safe Save 
-    # =========================
     def save_chunk(self, df, first=False):
 
         if df is None or df.empty:
