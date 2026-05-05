@@ -21,16 +21,13 @@ st.title("🚨 Real-Time IoT Intrusion Detection System")
 def run_model_on_chunk(df):
 
 
-    # Feature Engineering
-    # ======================
+ 
     df = engineer.add_all_features(df)
 
     df = df.replace([float("inf"), float("-inf")], 0)
     df = df.fillna(0)
 
-    # ======================
-    # Feature Selection
-    # ======================
+
     df_selected = df.reindex(columns=features, fill_value=0)
     for col in df_selected.columns:
         if df_selected[col].dtype == object:
@@ -39,24 +36,17 @@ def run_model_on_chunk(df):
             )
 
     df_selected = df_selected.apply(pd.to_numeric, errors='coerce').fillna(0)
-    # ======================
-    # Isolation + KL
-    # ======================
+
     df_scored = iso_model.compute_scores(df_selected)
     df_scored = kl_model.compute(df_scored)
 
-    # ======================
-    # RF
-    # ======================
     X_rf = df_scored.drop(columns=["label"], errors="ignore")
     rf_probs = rf_model.predict_proba(X_rf)
 
     if len(rf_probs.shape) > 1:
         rf_probs = rf_probs[:, -1]
 
-    # ======================
-    # Stacking
-    # ======================
+
     stack_X = pd.DataFrame({
         "rf": rf_probs,
         "iso": df_scored["anomaly_score"],
@@ -70,9 +60,7 @@ def run_model_on_chunk(df):
     probs = (probs - probs.min()) / (probs.max() - probs.min() + 1e-8)
 
     return probs
-# ======================
-# Session State
-# ======================
+
 if "threshold" not in st.session_state:
     st.session_state.threshold = 0.5
 
@@ -80,27 +68,21 @@ if "history" not in st.session_state:
     st.session_state.history = []
 if "threshold_history" not in st.session_state:
     st.session_state.threshold_history = []
-# ======================
-# KPIs
-# ======================
+
 col1, col2, col3, col4 = st.columns(4)
 
 kpi_threshold = col1.empty()
 kpi_detect = col2.empty()
-#kpi_fpr = col3.empty()
 kpi_alerts = col4.empty()
 status_placeholder = st.empty()
 explanation_placeholder = st.empty()
-# ======================
-# Charts
-# ======================
+
 chart_placeholder = st.empty()
 hist_placeholder = st.empty()
 table_placeholder = st.empty()
 threshold_chart = st.empty()
 progress_bar = st.empty()
-# ======================
-# ======================
+
 def generate_probs(n=1000):
     normal = np.random.normal(0.5, 0.01, int(n * 0.9))
     attack = np.random.normal(0.6, 0.05, int(n * 0.1))
@@ -109,9 +91,7 @@ def generate_probs(n=1000):
     labels = np.array([0]*len(normal) + [1]*len(attack))
 
     return probs, labels
-# ======================
-# Loop (real-time)
-# ======================
+
 st.markdown("### 📊 What am I seeing?")
 st.markdown("""
 - 🔵 Cyan = Normal traffic  
@@ -137,7 +117,7 @@ for step in range(50):
     true_labels = (true_labels != 3).astype(int)
 
     probs = run_model_on_chunk(df_clean)
-    # adaptive threshold
+
     target_rate = max(0.04, min(0.10, probs.mean()))
     new_threshold = np.percentile(probs, 100 * (1 - target_rate))
     alpha = 0.2
@@ -153,19 +133,16 @@ for step in range(50):
         st.session_state.threshold_history.pop(0)
     preds = (probs > threshold).astype(int)
 
-    # metrics
+
     alerts = preds.sum()
     detection_rate = alerts / len(preds)
     fp = ((preds == 1) & (true_labels == 0)).sum()
     tn = ((preds == 0) & (true_labels == 0)).sum()
 
-    #fpr = fp / max((fp + tn), 1)
-    # ======================
-    # Update KPIs
-    # ======================
+
     kpi_threshold.metric("Threshold", f"{threshold:.3f}", delta=f"{threshold-0.5:.3f}")   
     kpi_detect.metric("Attack Rate", f"{detection_rate*100:.1f}%")
-    #kpi_fpr.metric("FPR", f"{fpr:.4f}")
+
     kpi_alerts.metric("Alerts", int(alerts))
     progress_bar.progress(min(detection_rate, 1.0))
     if detection_rate > 0.15:
@@ -202,12 +179,10 @@ for step in range(50):
     """
         
     explanation_placeholder.info(explanation)
-    # ======================
-    # Line Chart
-    # ======================
+
     fig = go.Figure()
 
-    # normal
+
     fig.add_trace(go.Scatter(
         x=list(range(len(probs[preds == 0][:200]))),
         y=probs[preds == 0][:200],
@@ -216,7 +191,7 @@ for step in range(50):
         marker=dict(color='blue', size=6)
     ))
 
-    # attack
+
     fig.add_trace(go.Scatter(
         x=list(range(len(probs[preds == 1][:200]))),
         y=probs[preds == 1][:200],
@@ -225,7 +200,7 @@ for step in range(50):
         marker=dict(color='red', size=7)
     ))
 
-    # threshold
+
     fig.add_trace(go.Scatter(
         x=list(range(200)),
         y=[threshold]*200,
@@ -241,9 +216,7 @@ for step in range(50):
     )
     chart_placeholder.plotly_chart(fig, use_container_width=True)
     
-    # ======================
-    # Histogram
-    # ======================
+
     hist = go.Figure()
 
     hist.add_histogram(x=probs, nbinsx=50, name="Scores")
@@ -256,9 +229,7 @@ for step in range(50):
 
     hist_placeholder.plotly_chart(hist, use_container_width=True)
     
-    # ======================
-    # Alerts Table
-    # ======================
+
     attack_scores = probs[preds == 1][:10]
 
     df_alerts = pd.DataFrame({
